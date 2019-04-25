@@ -1,0 +1,7 @@
+SQL Query for file names
+OCR code
+country code adjustment
+multithread class
+Database upload after array cache reached
+
+tcp socket connection for work shedualer
