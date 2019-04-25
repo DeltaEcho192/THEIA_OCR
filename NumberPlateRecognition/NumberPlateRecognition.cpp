@@ -6,6 +6,7 @@
 #include "pch.h"
 #include <iostream>
 #include <mysql.h>
+#include "TinyEXIF.h"
 #include <vector>
 #include <filesystem>
 #include <string>
@@ -30,10 +31,17 @@ void PlateCheck(const vector<string> files,const string path,const char * addres
     vector<double> PlateConfidence;
     string finalPath;
 
+    MYSQL * conn;
+	conn = mysql_init(0);
+
+
+	conn = mysql_real_connect(conn, address, username, password, database, port, NULL, 0);
+
+
     for(int i = 0; i < fileAmt; i++)
     {
-        fileName = files[i];
-        finalPath = path + fileName;
+        
+        finalPath = path + files[i];
         
         // Recognize an image file. Alternatively, you could provide the image bytes in-memory.
         alpr::AlprResults results = openalpr.recognize(finalPath);
@@ -54,51 +62,66 @@ void PlateCheck(const vector<string> files,const string path,const char * addres
                     PlateConfidence.push_back(confidence);
                 }
         }
+		//Meta Datas
+		vector<double> lattitude = NULL;
+		vector<double> longitude = NULL;
+		string imageTime = NULL;
 
-    }
-    //Meta Datas
+		// read entire image file
+		std::ifstream file(files[i], std::ifstream::in | std::ifstream::binary);
+		file.seekg(0, std::ios::end);
+		std::streampos length = file.tellg();
+		file.seekg(0, std::ios::beg);
+		std::vector<uint8_t> data(length);
+		file.read((char*)data.data(), length);
 
-    if(PlateName.size() != PlateConfidence)
-    {
-        cout << "There was error with the Plate arrays size - 006" << endl;
-        exit(EXIT_FAILURE);
-    }
+		// parse image EXIF and XMP metadata
+		TinyEXIF::EXIFInfo imageEXIF(data.data(), length);
 
-    //SQL Insert
-    MYSQL * conn;
-	conn = mysql_init(0);
-
-
-	conn = mysql_real_connect(conn, address, username, password, database, port, NULL, 0);
-
-
-	if (conn)
-	{
-		puts("Successful connection to database!");
-        //!!!! adjust Names
-		for(int i = 0; i < PlateName.size(); i++)
-		{
-            //!!!!! Change
-			string query = "INSERT INTO dir_list_test (name) values ('" + newFiles[i] + "');";
-			cout << query << endl;
-			const char* q = query.c_str();
-			qstate = mysql_query(conn, q);
-			cout << qstate << endl;
-			if(qstate == 0)
-			{
-				cout << "Insertion was successful" << endl;
-			}
-			else
-			{
-				cout << "There was a failure - 003" << mysql_error(conn) << endl;
-			}
+		if (imageEXIF.GeoLocation.hasLatLon()) {
+			lattitude = imageEXIF.GeoLocation.Latitude ;
+			longitude = imageEXIF.GeoLocation.Longitude;
 		}
-	}
-	else
-	{
-		puts("Connection to database had failed! - 002");
-	}
 
+		imageTime = imageEXIF.DateTime;
+
+
+			if (PlateName.size() != PlateConfidence.size())
+			{
+				cout << "There was error with the Plate arrays size - 006" << endl;
+				exit(EXIT_FAILURE);
+			}
+        if (conn)
+        {
+            puts("Successful connection to database!");
+            for(int i = 0; i < PlateName.size(); i++)
+            {
+                string query = "INSERT INTO numberplates_testing (plate,confidence,lattitude,longitude,time) values (" + PlateName[i] + ","+ PlateConfidence[i]+","+lattitude+","+longitude+","+imageTime");";
+                cout << query << endl;
+                const char* q = query.c_str();
+                qstate = mysql_query(conn, q);
+                cout << qstate << endl;
+                if(qstate == 0)
+                {
+                    cout << "Insertion was successful" << endl;
+                }
+                else
+                {
+                    cout << "There was a failure - 003" << mysql_error(conn) << endl;
+                }
+            }
+        }
+        else
+        {
+            puts("Connection to database had failed! - 002");
+        }
+
+
+    }
+
+
+
+	
 
 }
 
