@@ -86,11 +86,12 @@ void PlateCheck(const vector<string> files,const string path,const char * addres
 		imageTime = imageEXIF.DateTime;
 
 
-			if (PlateName.size() != PlateConfidence.size())
-			{
-				cout << "There was error with the Plate arrays size - 006" << endl;
-				exit(EXIT_FAILURE);
-			}
+        if (PlateName.size() != PlateConfidence.size())
+        {
+            cout << "There was error with the Plate arrays size - 006" << endl;
+            exit(EXIT_FAILURE);
+        }
+
         if (conn)
         {
             puts("Successful connection to database!");
@@ -125,6 +126,46 @@ void PlateCheck(const vector<string> files,const string path,const char * addres
 
 }
 
+vector<string> fileQuery(string query, const char * address, const char * username, const char * password, const char * database,int port)
+{
+    vector<string> files;
+    MYSQL * conn;
+	MYSQL_ROW row;
+	MYSQL_RES *res;
+	conn = mysql_init(0);
+
+
+	conn = mysql_real_connect(conn, address, username, password, database, port, NULL, 0);
+
+
+	if (conn)
+	{
+		puts("Successful connection to database!");
+
+
+		const char* q = query.c_str();
+		qstate = mysql_query(conn, q);
+		if (!qstate)
+		{
+			res = mysql_store_result(conn);
+			while (row = mysql_fetch_row(res))
+			{
+				files.push_back(row[0]);
+			}
+		}
+		else
+		{
+			cout << "Query failed - 001: " << mysql_error(conn) << endl;
+		}
+	}
+	else
+	{
+		puts("Connection to database had failed! - 002");
+	}
+    return files;
+
+}
+
 int main()
 {
     //TODO Getting path from config file
@@ -147,6 +188,26 @@ int main()
         std::cerr << "Error loading OpenALPR - 007" << std::endl;
         return 1;
     }
+
+    static const int num_threads = 8;
+
+    thread OCR[num_threads];
+
+    for(int q = 0; q < num_threads; q++)
+    {
+        OCR[q] = std::thread(PlateCheck,);
+        q = q + 1;
+        threadCounter = threadCounter + 1;
+        } 
+
+    }
+    
+    for(int z = 0; z < num_threads; z++)
+    {
+        OCR[z].join();
+        z = z + 1;
+    }
+    
 
 
 
