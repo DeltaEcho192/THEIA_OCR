@@ -166,6 +166,37 @@ vector<string> fileQuery(string query, const char * address, const char * userna
 
 }
 
+vector<string> config(string configPath)
+{
+    string file = "OCR_config.txt";
+    
+    ifstream config(configPath);
+    vector<string> settings;
+    string line;
+    string output;
+
+    if(config.is_open())
+    {
+        cout << "Config File Was Opened." << endl;
+    }
+    else
+    {
+        cout << "There was a error opening the config file. -005" << endl;
+
+    }
+
+    while ( getline(config,line) )    
+    // get next line in file
+    {
+        stringstream ss(line);
+
+        ss >> output;
+        settings.push_back(output);
+        
+    }
+    return settings;
+}
+
 int main()
 {
     //TODO Getting path from config file
@@ -188,6 +219,42 @@ int main()
         std::cerr << "Error loading OpenALPR - 007" << std::endl;
         return 1;
     }
+
+    vector<string> fileTODO;
+    
+    fs::path currentPath = fs::current_path();
+    //cout << currentPath.parent_path() << endl;
+    string configFileName = "\\OCR_config.txt";
+    std::ostringstream configStr;
+    configStr << currentPath.parent_path();
+    workPath = configStr.str();
+    workPath.erase(0,1);
+    int PathLen = workPath.size() - 1;
+    cout << "Path Length " << PathLen << endl;
+    workPath.erase(PathLen,1);
+    configPath = workPath + configFileName; 
+	cout << configPath << " :This is the Config Path" << endl;
+
+
+	configArr = config(configPath);
+
+	string addressS = configArr[1];
+	const char *address = addressS.c_str();
+	string UserNameS = configArr[2];
+	const char * UserName = UserNameS.c_str();
+	string passwordS = configArr[3];
+	const char *password = passwordS.c_str();
+	string databaseNameS = configArr[4];
+	const char *databaseName = databaseNameS.c_str();
+	string portNameS = configArr[5];
+
+	stringstream portConvert(portNameS);
+	portConvert >> portName;
+
+    string query = "";
+
+    fileTODO = fileQuery(query,address,UserName,password,databaseName,port);
+
 
     static const int num_threads = 8;
 
